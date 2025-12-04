@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Control de Horarios</title>
+    <!-- Fuente Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        * { box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        
+        body, html { 
+            margin: 0; padding: 0; height: 100%; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            overflow: hidden;
+            background: linear-gradient(135deg, #021b36, #003b5b, #046faa);
+            background-size: 300% 300%;
+            animation: gradientShift 10s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* --- PANTALLA INICIAL --- */
+        #start-screen {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 400px;
+            z-index: 20;
+            backdrop-filter: blur(10px);
+            transition: opacity 0.3s;
+        }
+
+        h2 { margin: 0 0 10px 0; color: #003b5b; font-size: 1.6em; font-weight: 600; }
+        .subtitle { color: #666; font-size: 0.9em; margin-bottom: 30px; }
+
+        /* Botón Principal Grande */
+        .btn-main {
+            display: block; width: 100%; padding: 18px;
+            border: none; border-radius: 50px;
+            background: #046faa; color: white;
+            font-size: 18px; font-weight: 600;
+            cursor: pointer; transition: transform 0.2s, background 0.2s;
+            box-shadow: 0 6px 15px rgba(4,111,170,0.4);
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-main:hover { transform: translateY(-3px); background: #035a8a; }
+        .btn-main:active { transform: scale(0.97); }
+
+        /* --- CONTENEDOR APP --- */
+        #app-wrapper {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; background: white; z-index: 10;
+        }
+        iframe { width: 100%; height: 100%; border: none; }
+
+        /* --- PANTALLA DE RESCATE (MODIFICADA) --- */
+        #rescue-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.98);
+            z-index: 30;
+            display: none; /* Oculto por defecto */
+            flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 25px;
+        }
+
+        .rescue-title { color: #d32f2f; font-size: 1.3em; font-weight: bold; margin-bottom: 10px; }
+        .rescue-desc { color: #555; font-size: 14px; margin-bottom: 25px; max-width: 300px; line-height: 1.5; }
+
+        /* Botones de Rescate */
+        .btn-rescue-option {
+            width: 100%; max-width: 300px; padding: 14px; margin: 8px 0;
+            border-radius: 12px; border: 1px solid #ddd;
+            font-size: 15px; font-weight: 500; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: all 0.2s;
+        }
+        
+        /* Estilos específicos de botones */
+        .btn-google { background: white; color: #444; border-color: #ccc; }
+        .btn-next { background: #046faa; color: white; border: none; box-shadow: 0 4px 10px rgba(4,111,170,0.3); }
+        .btn-cancel { background: transparent; border: none; color: #777; text-decoration: underline; margin-top: 15px; }
+
+        /* Spinner */
+        .spinner {
+            width: 16px; height: 16px; border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%; border-top-color: white;
+            animation: spin 1s linear infinite; display: none;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <!-- PANTALLA 1: INICIO -->
+    <div id="start-screen">
+        <div style="font-size: 45px; margin-bottom: 10px;">🕒</div>
+        <h2>Control Horario</h2>
+        <div class="subtitle">Supervisores - LC. Service</div>
+        
+        <button class="btn-main" onclick="iniciarSecuencia()">
+            INGRESAR AL SISTEMA <span class="spinner" id="main-spinner"></span>
+        </button>
+        
+        <p style="font-size: 12px; color: #888; margin-top: 25px;">
+            Pulse para conectar automáticamente.
+        </p>
+    </div>
+
+    <!-- PANTALLA 2: APP -->
+    <div id="app-wrapper">
+        <iframe id="main-frame" src="" allow="geolocation *; microphone *; camera *; midi *; encrypted-media *; fullscreen *" title="Control Horarios"></iframe>
+    </div>
+
+    <!-- PANTALLA DE RESCATE (DINÁMICA) -->
+    <div id="rescue-screen">
+        <div style="font-size: 40px; margin-bottom: 10px;">⚠️</div>
+        <div class="rescue-title">¿Problemas de conexión?</div>
+        <p class="rescue-desc">Si la pantalla se quedó en blanco o dio error, elija una opción:</p>
+        
+        <!-- Opción A: Google Oficial (Siempre disponible) -->
+        <a id="btn-google-auth" href="#" target="_blank" class="btn-rescue-option btn-google" style="text-decoration:none;">
+            🚀 Elegir Cuenta en Google
+        </a>
+
+        <!-- Opción B: Siguiente Alternativa (Dinámico) -->
+        <button id="btn-next-attempt" class="btn-rescue-option btn-next" onclick="probarSiguiente()">
+            🔄 Probar Alternativa 2
+        </button>
+
+        <!-- Opción C: Cancelar -->
+        <button class="btn-cancel" onclick="cerrarRescate()">Cancelar (Ya cargó bien)</button>
+    </div>
+
+    <script>
+        // Enlace de tu Backend (CONTROL DE HORARIOS)
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbyQnGzVSUzAKAvh0A0z0Gr5VqqdUVFLLhY6DapbDJasMsy1xQ80LuVu50Hs-BIpLaEv/exec";
+        
+        let currentAuthIndex = 0; // Empieza en Opción 1 (Usuario 0)
+        let loadTimer;
+
+        // URL del selector oficial de Google (para el botón de ayuda)
+        const accountChooserUrl = "https://accounts.google.com/AccountChooser?continue=" + encodeURIComponent(scriptUrl);
+        document.getElementById('btn-google-auth').href = accountChooserUrl;
+
+        function iniciarSecuencia() {
+            // Mostrar carga
+            const spinner = document.getElementById('main-spinner');
+            spinner.style.display = 'inline-block';
+            
+            // Iniciar intento 0 (Opción 1)
+            setTimeout(() => {
+                intentarCarga(0);
+                spinner.style.display = 'none';
+            }, 300);
+        }
+
+        function intentarCarga(index) {
+            currentAuthIndex = index;
+            
+            // Ocultar inicio / Mostrar App
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('rescue-screen').style.display = 'none'; // Ocultar rescate anterior si lo hubiera
+            document.getElementById('app-wrapper').style.display = 'block';
+
+            // URL Mágica
+            const cacheBuster = new Date().getTime();
+            const finalUrl = scriptUrl + "?authuser=" + index + "&v=" + cacheBuster;
+
+            const iframe = document.getElementById('main-frame');
+            iframe.src = finalUrl;
+
+            // ACTIVAR TEMPORIZADOR DE FALLO (5 segundos)
+            // Si en 5s el usuario no ha cerrado esto, asumimos que se colgó
+            if (loadTimer) clearTimeout(loadTimer);
+            
+            loadTimer = setTimeout(() => {
+                mostrarRescate();
+            }, 5000);
+
+            // Si el iframe carga, no cancelamos el timer automáticamente
+            // porque el error de Google a veces dispara el evento "load".
+            // Dejamos que el usuario decida si ve bien la app.
+        }
+
+        function mostrarRescate() {
+            const nextIndex = currentAuthIndex + 1;
+            const btnNext = document.getElementById('btn-next-attempt');
+
+            // Configurar el botón de "Siguiente Alternativa"
+            if (nextIndex <= 2) { // Si hay más opciones (1 o 2)
+                btnNext.style.display = 'flex';
+                btnNext.innerHTML = `🔄 Probar Alternativa ${nextIndex + 1}`; // Texto humano (2 o 3)
+            } else {
+                // Si ya probamos todas (0, 1 y 2), ocultamos este botón
+                btnNext.style.display = 'none';
+            }
+
+            document.getElementById('rescue-screen').style.display = 'flex';
+        }
+
+        function probarSiguiente() {
+            // Intentar con el siguiente índice
+            intentarCarga(currentAuthIndex + 1);
+        }
+
+        function cerrarRescate() {
+            document.getElementById('rescue-screen').style.display = 'none';
+            if (loadTimer) clearTimeout(loadTimer);
+        }
+
+    </script>
+</body>
+</html>
